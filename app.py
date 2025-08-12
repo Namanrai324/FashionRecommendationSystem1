@@ -1,215 +1,79 @@
-
 import streamlit as st
-import os
-from PIL import Image
+import tensorflow as tf
 import numpy as np
 import pickle
-import tensorflow as tf
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.layers import GlobalMaxPooling2D
-from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
-from sklearn.neighbors import NearestNeighbors
-from numpy.linalg import norm
 import gdown
+import os
+import re
+import logging
+from PIL import Image
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
+from tensorflow.keras.layers import GlobalMaxPooling2D
+from tensorflow.keras.preprocessing import image
+from sklearn.neighbors import NearestNeighbors
 
-# ========================
+# Suppress TensorFlow warnings
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
+
+# -------------------
 # Google Drive File IDs
-# ========================
-FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"   # filenames.pkl
-EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV" # embeddings.pkl
+# -------------------
+EMBEDDINGS_URL = "https://drive.google.com/uc?id=11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
+FILENAMES_URL = "https://drive.google.com/uc?id=1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"
 
-FILENAMES_PATH = "filenames.pkl"
+# Paths
 EMBEDDINGS_PATH = "embeddings.pkl"
+FILENAMES_PATH = "filenames.pkl"
 
-# ========================
-# Download files if missing
-# ========================
-if not os.path.exists(FILENAMES_PATH):
-    gdown.download(f"https://drive.google.com/uc?id={FILENAMES_ID}", FILENAMES_PATH, quiet=False)
+# -------------------
+# Download Data if Missing
+# -------------------
+def download_files():
+    if not os.path.exists(EMBEDDINGS_PATH):
+        gdown.download(EMBEDDINGS_URL, EMBEDDINGS_PATH, quiet=False)
+    if not os.path.exists(FILENAMES_PATH):
+        gdown.download(FILENAMES_URL, FILENAMES_PATH, quiet=False)
 
-if not os.path.exists(EMBEDDINGS_PATH):
-    gdown.download(f"https://drive.google.com/uc?id={EMBEDDINGS_ID}", EMBEDDINGS_PATH, quiet=False)
+download_files()
 
-# ========================
-# Load data
-# ========================
-feature_list = np.array(pickle.load(open(EMBEDDINGS_PATH, 'rb')))
-filenames = pickle.load(open(FILENAMES_PATH, 'rb'))
+# -------------------
+# Cache model and data
+# -------------------
+@st.cache_resource
+def load_model():
+    base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
+    base_model.trainable = False
+    return tf.keras.Sequential([base_model, GlobalMaxPooling2D()])
 
-# ========================
-# Load Model
-# ========================
-base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
-base_model.trainable = False
-model = tf.keras.Sequential([
-    base_model,
-    GlobalMaxPooling2D()
-])
+@st.cache_data
+def load_features():
+    feature_list = np.array(pickle.load(open(EMBEDDINGS_PATH, 'rb')))
+    filenames = pickle.load(open(FILENAMES_PATH, 'rb'))
+    return feature_list, filenames
 
-# ========================
-# Custom CSS
-# ========================
-st.markdown("""<style>
-/* Vibrant background gradient */
-body {
-    background: linear-gradient(135deg, #FF9A8B 0%, #FF6B95 50%, #FF8E53 100%);
-    background-attachment: fixed;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-/* Main container */
-.main-container {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
-    padding: 2rem;
-    margin: 2rem auto;
-    max-width: 1200px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-/* Title */
-.big-title {
-    text-align: center;
-    font-size: 3.5rem;
-    font-weight: 800;
-    background: linear-gradient(90deg, #FF416C, #FF4B2B);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    margin-bottom: 0.5rem;
-    letter-spacing: 1px;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-}
-.subtitle {
-    text-align: center;
-    font-size: 1.2rem;
-    color: #ffffff;
-    margin-bottom: 2rem;
-    font-weight: 400;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-}
-/* Upload section */
-.upload-section {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 15px;
-    padding: 2rem;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
-    border: 2px dashed #FF416C;
-    transition: all 0.3s ease;
-}
-.upload-section:hover {
-    border-color: #FF4B2B;
-    transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(255, 75, 43, 0.3);
-}
-/* Recommendation cards */
-.rec-card {
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 15px;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    margin-bottom: 1rem;
-    position: relative;
-    border: 1px solid rgba(255, 255, 255, 0.5);
-}
-.rec-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(255, 75, 43, 0.2);
-}
-.rec-card:before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: linear-gradient(90deg, #FF416C, #FF4B2B);
-}
-.rec-caption {
-    padding: 1rem;
-    text-align: center;
-    font-size: 1rem;
-    color: #333;
-    font-weight: 600;
-}
-/* Badge */
-.rec-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: #FF416C;
-    color: white;
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    z-index: 1;
-}
-/* Footer */
-.footer {
-    margin-top: 3rem;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.9rem;
-    padding: 1rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-</style>""", unsafe_allow_html=True)
+model = load_model()
+feature_list, filenames = load_features()
 
-# ========================
-# Main Container
-# ========================
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
-
-# Header
-st.markdown("""
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-        <h1 class="big-title">Fashion Finder AI</h1>
-        <p class="subtitle">Discover your perfect style match with our intelligent recommendation system</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# ========================
-# Upload Section
-# ========================
-with st.container():
-    st.markdown('<div class="upload-section">', unsafe_allow_html=True)
-    st.markdown("""
-        <h3 style="text-align: center; color: #FF416C; margin-bottom: 1.5rem;">📤 Upload Your Fashion Item</h3>
-        <p style="text-align: center; color: #666; margin-bottom: 1.5rem;">
-            Upload an image of your favorite clothing item to discover similar styles that match your taste
-        </p>
-    """, unsafe_allow_html=True)
-    uploaded_file = st.file_uploader(" ", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# ========================
-# Functions
-# ========================
+# -------------------
+# Helper Functions
+# -------------------
 def save_uploaded_file(uploaded_file):
+    filename_clean = re.sub(r'[^a-zA-Z0-9_.-]', '_', uploaded_file.name)
     try:
-        if not os.path.exists("uploads"):
-            os.makedirs("uploads")
-        with open(os.path.join('uploads', uploaded_file.name), 'wb') as f:
+        with open(filename_clean, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        return 1
-    except:
-        return 0
+        return filename_clean
+    except Exception as e:
+        st.error(f"Error saving file: {e}")
+        return None
 
-def feature_extraction(img_path, model):
+def extract_features(img_path, model):
     img = image.load_img(img_path, target_size=(224, 224))
     img_array = image.img_to_array(img)
     expanded_img_array = np.expand_dims(img_array, axis=0)
     preprocessed_img = preprocess_input(expanded_img_array)
     result = model.predict(preprocessed_img).flatten()
-    normalized_result = result / norm(result)
-    return normalized_result
+    return result / np.linalg.norm(result)
 
 def recommend(features, feature_list):
     neighbors = NearestNeighbors(n_neighbors=6, algorithm='brute', metric='euclidean')
@@ -217,41 +81,52 @@ def recommend(features, feature_list):
     distances, indices = neighbors.kneighbors([features])
     return indices
 
-# ========================
-# Display Results
-# ========================
-if uploaded_file is not None:
-    if save_uploaded_file(uploaded_file):
-        display_image = Image.open(uploaded_file)
-        st.markdown('<div style="text-align: center;">', unsafe_allow_html=True)
-        st.image(display_image, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+# -------------------
+# Streamlit UI
+# -------------------
+st.set_page_config(page_title="Fashion Finder AI", layout="wide")
 
-        features = feature_extraction(os.path.join("uploads", uploaded_file.name), model)
-        indices = recommend(features, feature_list)
-
-        cols = st.columns(5)
-        for i, col in enumerate(cols):
-            with col:
-                st.markdown(f'<div class="rec-badge">{i + 1}</div>', unsafe_allow_html=True)
-                st.markdown('<div class="rec-card">', unsafe_allow_html=True)
-                st.image(filenames[indices[0][i]], use_container_width=True)
-                st.markdown(
-                    f'<div style="padding:1rem; text-align:center; font-size:1rem; font-weight:600; background:linear-gradient(90deg, #6DD5FA, #FFFFFF); -webkit-background-clip:text; color:transparent;">Style Match <span style="color:#2196F3;">#{i + 1}</span></div>',
-                    unsafe_allow_html=True
-                )
-                st.markdown('</div>', unsafe_allow_html=True)
-    else:
-        st.error("❌ Error uploading the file. Please try again.")
-
-# ========================
-# Footer
-# ========================
 st.markdown("""
-    <div class="footer">
-        <p>Developed with ❤ using Streamlit</p>
-    </div>
+    <style>
+    .stApp {
+        background-color: #fafafa;
+        font-family: 'Segoe UI', sans-serif;
+    }
+    .title {
+        font-size: 48px;
+        font-weight: bold;
+        color: #2E86C1;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .rec-caption {
+        font-size: 18px;
+        color: #2874A6;
+        text-align: center;
+        margin-top: 8px;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
-# Close container
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown('<div class="title">👗 Fashion Finder AI</div>', unsafe_allow_html=True)
+st.write("Upload an image to find similar fashion items from our dataset!")
+
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    img_path = save_uploaded_file(uploaded_file)
+    if img_path:
+        display_image = Image.open(img_path)
+        st.image(display_image, caption="Uploaded Image", use_container_width=True)
+
+        # Extract features
+        features = extract_features(img_path, model)
+        indices = recommend(features, feature_list)
+
+        st.subheader("Similar Items Found:")
+        cols = st.columns(5)
+        for i, col in enumerate(cols):
+            if i < len(indices[0]):
+                with col:
+                    st.image(filenames[indices[0][i]], use_container_width=True)
+                    st.markdown(f'<div class="rec-caption">Style Match #{i+1}</div>', unsafe_allow_html=True)
