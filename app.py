@@ -12,21 +12,23 @@ from numpy.linalg import norm
 import gdown
 
 
-# Google Drive file IDs (replace with your actual IDs)
-EMBEDDINGS_FILE_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
-FILENAMES_FILE_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"
+# -------- Google Drive से pickle download --------
+def download_from_drive(file_id, output_path):
+    if not os.path.exists(output_path):
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, output_path, quiet=False)
 
-# Download embeddings.pkl if not exists
-if not os.path.exists("embeddings.pkl"):
-    gdown.download(f"https://drive.google.com/uc?id={EMBEDDINGS_FILE_ID}", "embeddings.pkl", quiet=False)
+# तुम्हारे Google Drive file IDs
+EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"  # embeddings.pkl
+FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"    # filenames.pkl
 
-# Download filenames.pkl if not exists
-if not os.path.exists("filenames.pkl"):
-    gdown.download(f"https://drive.google.com/uc?id={FILENAMES_FILE_ID}", "filenames.pkl", quiet=False)
+# Download अगर local में files नहीं हैं
+download_from_drive(EMBEDDINGS_ID, "embeddings.pkl")
+download_from_drive(FILENAMES_ID, "filenames.pkl")
 
 # Load pickle files
-feature_list = np.array(pickle.load(open('embeddings.pkl', 'rb')))
-filenames = pickle.load(open('filenames.pkl', 'rb'))
+feature_list = pickle.load(open("embeddings.pkl", "rb"))
+filenames = pickle.load(open("filenames.pkl", "rb"))
 
 # Model
 base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
@@ -326,4 +328,5 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
 
