@@ -13,28 +13,29 @@ import gdown
 import zipfile
 
 
-# ==== Google Drive se data download aur load ====
+# ---------- Google Drive से file download ----------
 def download_from_drive(file_id, output_path):
+    """अगर फाइल local में नहीं है तो Google Drive से डाउनलोड करो"""
     if not os.path.exists(output_path):
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, output_path, quiet=False)
 
-# File IDs
-EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
-FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"
-IMAGES_ZIP_ID = "1wnAu5zzUuchth66C5_d-hJTIdS_S7ZxG"
+# Google Drive file IDs
+EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"  # embeddings.pkl
+FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"    # filenames.pkl
+IMAGES_ZIP_ID = "1wnAu5zzUuchth66C5_d-hJTIdS_S7ZxG"   # images.zip
 
 # Download pickle files
 download_from_drive(EMBEDDINGS_ID, "embeddings.pkl")
 download_from_drive(FILENAMES_ID, "filenames.pkl")
 
-# Download & extract images.zip if not exists
+# Download images zip और unzip करो
 if not os.path.exists("images"):
     download_from_drive(IMAGES_ZIP_ID, "images.zip")
     with zipfile.ZipFile("images.zip", 'r') as zip_ref:
         zip_ref.extractall("images")
 
-# Load pickle data
+# Load pickle files
 feature_list = pickle.load(open("embeddings.pkl", "rb"))
 filenames = pickle.load(open("filenames.pkl", "rb"))
 
@@ -340,6 +341,7 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 
