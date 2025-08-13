@@ -9,6 +9,8 @@ from tensorflow.keras.layers import GlobalMaxPooling2D
 from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 from sklearn.neighbors import NearestNeighbors
 from numpy.linalg import norm
+import gdown
+
 
 # Google Drive file IDs (replace with your actual IDs)
 EMBEDDINGS_FILE_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
@@ -324,3 +326,4 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
