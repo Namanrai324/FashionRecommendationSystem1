@@ -233,11 +233,14 @@ with st.container():
 # Functions
 def save_uploaded_file(uploaded_file):
     try:
+        os.makedirs('uploads', exist_ok=True)  # Agar folder nahi hai to banado
         with open(os.path.join('uploads', uploaded_file.name), 'wb') as f:
             f.write(uploaded_file.getbuffer())
         return 1
-    except:
+    except Exception as e:
+        st.error(f"Error saving file: {e}")
         return 0
+
 
 
 def feature_extraction(img_path, model):
@@ -328,5 +331,6 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 
