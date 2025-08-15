@@ -1,5 +1,5 @@
 # Fashion Recommendation System1
-#👗 Fashion Finder AI
+👗 Fashion Finder AI
 
 Fashion Finder AI is an AI-powered recommendation system that uses deep learning and computer vision to suggest visually similar fashion items based on an uploaded image.
 
@@ -11,7 +11,7 @@ Content-based filtering – Finds similar styles using Nearest Neighbors algorit
 Interactive UI – Built with Streamlit for a modern and responsive interface.
 Cloud storage integration – Embeddings stored and retrieved via Google Drive.
 
-#🛠 Tech Stack
+🛠 Tech Stack
 
 Python – Core language
 TensorFlow / Keras – Deep learning & feature extraction
@@ -28,19 +28,20 @@ OpenCV – Image processing
 ├── images/               # Dataset images
 └── uploads/              # Uploaded images (runtime)
 
-#⚙️ Installation
+⚙️ Installation 
+
 git clone https://github.com/yourusername/fashion-finder-ai.git
 cd fashion-finder-ai
 pip install -r requirements.txt
 streamlit run app.py
 
-#📸 Usage
+📸 Usage
 
 Open the web app.
 Upload a clothing/fashion item image.
 Get 5 similar style recommendations instantly.
 
-#📊 Model Details
+📊 Model Details
 
 Model: ResNet50 (pre-trained on ImageNet)
 Feature Extraction: Global Max Pooling applied to convolutional layers
