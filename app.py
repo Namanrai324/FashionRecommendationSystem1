@@ -13,23 +13,46 @@ import gdown
 import zipfile
 
 
-# -------- Google Drive से pickle download --------
+# -------- Google Drive से फ़ाइलें डाउनलोड करना --------
 def download_from_drive(file_id, output_path):
     if not os.path.exists(output_path):
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, output_path, quiet=False)
 
 # तुम्हारे Google Drive file IDs
-EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"  # embeddings.pkl
-FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"    # filenames.pkl
+EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
+FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"
+IMAGES_ZIP_ID = "1wnAu5zzUuchth66C5_d-hJTIdS_S7ZxG"  # <-- यहाँ आपकी zip फ़ाइल की ID है
+IMAGES_FOLDER_NAME = "images" 
 
-# Download अगर local में files नहीं हैं
+# Download अगर लोकल में files नहीं हैं
 download_from_drive(EMBEDDINGS_ID, "embeddings.pkl")
 download_from_drive(FILENAMES_ID, "filenames.pkl")
+download_from_drive(IMAGES_ZIP_ID, "images.zip")
+
+# ZIP फ़ाइल को अनज़िप करें
+if os.path.exists("images.zip") and not os.path.exists(IMAGES_FOLDER_NAME):
+    try:
+        with zipfile.ZipFile("images.zip", "r") as zip_ref:
+            zip_ref.extractall(".")
+        st.success("Images unzipped successfully! 🚀")
+    except zipfile.BadZipFile:
+        st.error("Error: The downloaded file is not a valid zip file. Please check your Google Drive ID.")
+        st.stop()
+    except Exception as e:
+        st.error(f"An error occurred while unzipping: {e}")
+        st.stop()
 
 # Load pickle files
-feature_list = pickle.load(open("embeddings.pkl", "rb"))
-filenames = pickle.load(open("filenames.pkl", "rb"))
+try:
+    feature_list = pickle.load(open("embeddings.pkl", "rb"))
+    filenames = pickle.load(open("filenames.pkl", "rb"))
+except FileNotFoundError:
+    st.error("Essential files (embeddings.pkl or filenames.pkl) not found. Please check Google Drive links.")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading pickle files: {e}")
+    st.stop()
 
 
 # Model
@@ -333,6 +356,7 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 
