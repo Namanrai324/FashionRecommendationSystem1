@@ -20,8 +20,8 @@ def download_from_drive(file_id, output_path):
         gdown.download(url, output_path, quiet=False)
 
 # तुम्हारे Google Drive file IDs
-EMBEDDINGS_ID = "11RCycijG4J-sHe8kTLL_D7mjHwISEiPV"
-FILENAMES_ID = "1CyMcg6PmFDzQ1Mt9jmAgL4mj7jB73arI"
+EMBEDDINGS_ID = "1qVrdafQVSsOl8LQEYh6y5j44PBgEbQ3s"
+FILENAMES_ID = "1I0gcv6OtU2Q7cxd66sHH7FOUwoTNjBzM"
 IMAGES_ZIP_ID = "1wnAu5zzUuchth66C5_d-hJTIdS_S7ZxG"  # <-- यहाँ आपकी zip फ़ाइल की ID है
 IMAGES_FOLDER_NAME = "images" 
 
@@ -356,6 +356,7 @@ st.markdown("""
 
 # Close main container
 st.markdown('</div>', unsafe_allow_html=True)
+
 
 
 
